@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="cover.png" alt="ZhraanF Portfolio Cover" width="100%">
+  <img src="img/cover.png" alt="ZhraanF Portfolio Cover" width="100%">
   <br><br>
   <h2>ZhraanF | Portofolio Website</h2>
   <br>
