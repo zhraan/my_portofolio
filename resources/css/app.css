@@ -1065,6 +1065,28 @@ body::before {
     opacity: 0.8;
 }
 
+/* Make custom cursor white/neon on specific dark section interactions */
+body.lightbox-active .cursor-dot, body.lightbox-active .cursor-trail,
+body:has(#github:hover) .cursor-dot, body:has(#github:hover) .cursor-trail,
+body:has(#music:hover) .cursor-dot, body:has(#music:hover) .cursor-trail,
+body:has(.career-gallery-item:hover) .cursor-dot, body:has(.career-gallery-item:hover) .cursor-trail,
+body:has(.career-gallery-more:hover) .cursor-dot, body:has(.career-gallery-more:hover) .cursor-trail {
+    background-color: #ffffff !important;
+}
+
+body.lightbox-active .cursor-ring,
+body:has(#github:hover) .cursor-ring,
+body:has(#music:hover) .cursor-ring,
+body:has(.career-gallery-item:hover) .cursor-ring,
+body:has(.career-gallery-more:hover) .cursor-ring {
+    border-color: #ffffff !important;
+}
+
+/* Force override system cursor in imported subcomponents */
+#github *, .gh-list-item *, .gh-list-item a, .calendar *, .calendar a, .calendar rect {
+    cursor: none !important;
+}
+
 .cursor-trail {
     position: fixed;
     width: 6px; height: 6px;

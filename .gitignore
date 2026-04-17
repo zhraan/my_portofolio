@@ -23,3 +23,9 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /.agents/
+
+# Ignored custom project files
+MAIN_INSTRUCTION.md
+skills-lock.json
+THEME_IMAGE_REFERENCE.png
+check_db.php

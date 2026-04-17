@@ -1104,7 +1104,7 @@ function initGitHub() {
             const locationEl = document.getElementById('gh-location');
             if (avatarEl) avatarEl.src = data.avatar_url;
             if (nameEl) nameEl.textContent = data.name || data.login;
-            if (bioEl) bioEl.textContent = data.bio || 'Data Professional · Open Source Contributor';
+            if (bioEl) bioEl.textContent = data.bio || 'Data Enthusiast and CyberSecurity Learner';
             if (locationEl) locationEl.textContent = data.location || '';
 
             // Animate stats
@@ -1215,66 +1215,177 @@ function initGitHub() {
     renderCommitHeatmap(username);
 }
 
-function renderCommitHeatmap(username) {
+// Cache for latest API fetch
+let ghCommitDataCache = null;
+
+async function renderCommitHeatmap(username, selectedYear = null) {
     const container = document.getElementById('gh-heatmap');
     if (!container) return;
 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const colors = isDark
-        ? ['#161B22', '#0E4429', '#006D32', '#26A641', '#39D353']
-        : ['#EBEDF0', '#9BE9A8', '#40C463', '#30A14E', '#216E39'];
-
-    // Generate heatmap with random data (since GitHub's contribution API requires auth)
-    // Use ghchart as fallback image, but also render an SVG heatmap
-    const weeks = 52;
-    const days = 7;
-    const cellSize = 13;
-    const cellGap = 3;
-    const totalW = weeks * (cellSize + cellGap);
-    const totalH = days * (cellSize + cellGap);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-    let svg = `<svg width="${totalW + 30}" height="${totalH + 25}" class="gh-heatmap-svg">`;
-    // Month labels
-    const today = new Date();
-    for (let m = 0; m < 12; m++) {
-        const monthIndex = (today.getMonth() - 11 + m + 12) % 12;
-        const x = Math.floor((m / 12) * weeks) * (cellSize + cellGap) + 30;
-        svg += `<text x="${x}" y="10" class="gh-heatmap-label">${months[monthIndex]}</text>`;
+    if (!selectedYear) {
+        selectedYear = new Date().getFullYear();
     }
-    // Day labels
-    const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
-    dayLabels.forEach((l, i) => {
-        if (l) svg += `<text x="0" y="${i * (cellSize + cellGap) + 25 + cellSize - 2}" class="gh-heatmap-label">${l}</text>`;
-    });
-    // Cells
-    for (let w = 0; w < weeks; w++) {
-        for (let d = 0; d < days; d++) {
-            // Weighted random: more likely low activity
-            const rand = Math.random();
-            let level;
-            if (rand < 0.55) level = 0;
-            else if (rand < 0.75) level = 1;
-            else if (rand < 0.88) level = 2;
-            else if (rand < 0.95) level = 3;
-            else level = 4;
 
-            const x = w * (cellSize + cellGap) + 30;
-            const y = d * (cellSize + cellGap) + 18;
-            const commits = [0, 2, 5, 8, 12][level];
-            svg += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" fill="${colors[level]}" class="gh-heatmap-cell" data-commits="${commits}"><title>${commits} contributions</title></rect>`;
+    // Loading State
+    container.innerHTML = '<div style="min-height: 150px; display: flex; align-items: center; justify-content: center; font-family: monospace; color: var(--text-muted);">Fetching realtime commits from Github...</div>';
+    container.style.position = 'relative';
+
+    try {
+        let contributions;
+        if (!ghCommitDataCache) {
+            const response = await fetch(`https://github-contributions-api.deno.dev/${username}.json`);
+            if (!response.ok) throw new Error('Github data unavailable');
+            const data = await response.json();
+            ghCommitDataCache = data.contributions; 
         }
+        
+        contributions = ghCommitDataCache; // Array of weeks, each containing a day object
+
+        const weeks = contributions.length;
+        const days = 7;
+        const cellSize = 13;
+        const cellGap = 3;
+        const totalW = weeks * (cellSize + cellGap);
+        const totalH = days * (cellSize + cellGap);
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+        // Flexbox Wrapper for Graph + Year List
+        let html = `<div style="display: flex; gap: 20px; align-items: flex-start;">
+            <div style="flex: 1; min-width: 0;">
+                <div style="width: 100%; overflow-x: auto; padding-bottom: 5px;">
+                    <svg width="${totalW + 30}" height="${totalH + 25}" class="gh-heatmap-svg" style="min-width: ${totalW + 30}px">`;
+        
+        // Dynamic Styles for the native SVG and UI
+        html += `<style>
+            .gh-cell { transition: stroke 0.2s, opacity 0.2s; outline: none; stroke: rgba(255,255,255,0.05); stroke-width: 1px; }
+            .gh-cell:hover { stroke: var(--text); stroke-width: 1.5px; opacity: 0.8; }
+            .gh-tooltip { position: absolute; background: #24292E; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-family: -apple-system, sans-serif; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; z-index: 100; transform: translate(-50%, -100%); margin-top: -8px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-weight: 500; }
+            .gh-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #24292E transparent transparent transparent; }
+            
+            .gh-year-btn { background: transparent; border: none; color: var(--text-muted); padding: 8px 16px; text-align: left; border-radius: 6px; cursor: none !important; font-size: 13px; font-family: -apple-system, sans-serif; transition: background 0.2s, color 0.2s; }
+            .gh-year-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+            .gh-year-btn.active { background: #1f6feb; color: white; font-weight: 600; }
+            
+            /* Theme binding */
+            [data-theme='light'] .gh-year-btn:hover { background: rgba(0,0,0,0.05); }
+            [data-theme='light'] .gh-year-btn.active { color: white; }
+            [data-theme='light'] .gh-cell[data-level='0'] { fill: #ebedf0; stroke: rgba(0,0,0,0.05); }
+            [data-theme='light'] .gh-cell[data-level='1'] { fill: #9be9a8; stroke: none; }
+            [data-theme='light'] .gh-cell[data-level='2'] { fill: #40c463; stroke: none; }
+            [data-theme='light'] .gh-cell[data-level='3'] { fill: #30a14e; stroke: none; }
+            [data-theme='light'] .gh-cell[data-level='4'] { fill: #216e39; stroke: none; }
+            
+            [data-theme='dark'] .gh-cell[data-level='0'] { fill: #161b22; }
+            [data-theme='dark'] .gh-cell[data-level='1'] { fill: #0e4429; stroke: none; }
+            [data-theme='dark'] .gh-cell[data-level='2'] { fill: #006d32; stroke: none; }
+            [data-theme='dark'] .gh-cell[data-level='3'] { fill: #26a641; stroke: none; }
+            [data-theme='dark'] .gh-cell[data-level='4'] { fill: #39d353; stroke: none; }
+        </style>`;
+
+        // Month Labels
+        let currentMonth = -1;
+        contributions.forEach((week, w) => {
+            if (week.length > 0) {
+                const dateParts = week[0].date.split('-');
+                if (dateParts.length === 3) {
+                    const month = parseInt(dateParts[1], 10) - 1;
+                    if (month !== currentMonth && w < weeks - 2) {
+                        const x = w * (cellSize + cellGap) + 30;
+                        html += `<text x="${x}" y="10" fill="var(--text-muted)" font-size="11" font-family="-apple-system, sans-serif">${months[month]}</text>`;
+                        currentMonth = month;
+                    }
+                }
+            }
+        });
+
+        // Day Labels
+        const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+        dayLabels.forEach((l, i) => {
+            if (l) html += `<text x="0" y="${i * (cellSize + cellGap) + 25 + cellSize - 2}" fill="var(--text-muted)" font-size="11" font-family="-apple-system, sans-serif">${l}</text>`;
+        });
+
+        // Loop over weeks and days
+        for (let w = 0; w < weeks; w++) {
+            const week = contributions[w];
+            for (let i = 0; i < week.length; i++) {
+                const day = week[i];
+                let level = 0;
+                switch(day.contributionLevel) {
+                    case "FIRST_QUARTILE": level = 1; break;
+                    case "SECOND_QUARTILE": level = 2; break;
+                    case "THIRD_QUARTILE": level = 3; break;
+                    case "FOURTH_QUARTILE": level = 4; break;
+                }
+                
+                const x = w * (cellSize + cellGap) + 30;
+                const y = i * (cellSize + cellGap) + 18;
+                const commits = day.contributionCount;
+                
+                const dateObj = new Date(day.date);
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                const tooltipText = commits === 0 ? `No contributions on ${dateStr}` : `${commits} contribution${commits > 1 ? 's' : ''} on ${dateStr}`;
+                
+                html += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" data-level="${level}" class="gh-cell" data-tooltip="${tooltipText}" style="cursor: none !important;"></rect>`;
+            }
+        }
+        html += `</svg></div>`;
+
+        // Add Legend
+        html += `<div style="display: flex; justify-content: flex-end; align-items: center; font-size: 11px; margin-top: 8px; color: var(--text-muted); font-family: -apple-system, sans-serif;">
+            <span style="margin-right: 5px;">Less</span>
+            <div title="0 contributions" class="gh-cell" data-level="0" style="width: 10px; height: 10px; border-radius: 2px; margin: 0 2px;"></div>
+            <div title="1-3 contributions" class="gh-cell" data-level="1" style="width: 10px; height: 10px; border-radius: 2px; margin: 0 2px;"></div>
+            <div title="4-6 contributions" class="gh-cell" data-level="2" style="width: 10px; height: 10px; border-radius: 2px; margin: 0 2px;"></div>
+            <div title="7-9 contributions" class="gh-cell" data-level="3" style="width: 10px; height: 10px; border-radius: 2px; margin: 0 2px;"></div>
+            <div title="10+ contributions" class="gh-cell" data-level="4" style="width: 10px; height: 10px; border-radius: 2px; margin: 0 2px;"></div>
+            <span style="margin-left: 5px;">More</span>
+        </div></div>`;
+
+        // Year Column
+        const cy = new Date().getFullYear();
+        html += `<div style="width: 70px; display: flex; flex-direction: column; gap: 2px; padding-top: 5px;">`;
+        [cy, cy-1, cy-2, cy-3, cy-4].forEach(yr => {
+            html += `<button class="gh-year-btn ${selectedYear == yr ? 'active' : ''}" data-year="${yr}">${yr}</button>`;
+        });
+        html += `</div></div>`; // End column, End flex
+        
+        // Inject tooltip element standalone
+        html += `<div id="gh-native-tooltip" class="gh-tooltip"></div>`;
+
+        container.innerHTML = html;
+
+        // Activate Tooltip Hover System natively
+        const tooltip = document.getElementById('gh-native-tooltip');
+        container.querySelectorAll('.gh-cell').forEach(cell => {
+            cell.addEventListener('mouseenter', (e) => {
+                const text = cell.getAttribute('data-tooltip');
+                if(!text) return;
+                tooltip.textContent = text;
+                tooltip.style.opacity = '1';
+                
+                const rect = cell.getBoundingClientRect();
+                const boxRect = container.getBoundingClientRect();
+                
+                tooltip.style.left = (rect.left - boxRect.left + (rect.width/2)) + 'px';
+                tooltip.style.top = (rect.top - boxRect.top) + 'px';
+            });
+            cell.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = '0';
+            });
+        });
+
+        // Activate Year Click Events
+        container.querySelectorAll('.gh-year-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const y = e.target.getAttribute('data-year');
+                renderCommitHeatmap(username, y);
+            });
+        });
+
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = `<p style="color: var(--danger); font-size: 0.9rem; text-align: center;">Unable to load true GitHub history API.</p>`;
     }
-    svg += '</svg>';
-
-    // Legend
-    svg += `<div class="gh-heatmap-legend"><span class="gh-heatmap-legend-text">Less</span>`;
-    colors.forEach(c => {
-        svg += `<span class="gh-heatmap-legend-cell" style="background:${c}"></span>`;
-    });
-    svg += `<span class="gh-heatmap-legend-text">More</span></div>`;
-
-    container.innerHTML = svg;
 }
 
 
