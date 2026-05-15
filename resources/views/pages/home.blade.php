@@ -193,71 +193,175 @@
         </div>
 
         <div class="career-list">
-            @foreach($careerEntries as $index => $entry)
-            <div class="career-card" data-career-card data-entry="{{ json_encode($entry) }}" data-scroll-reveal>
-                <div class="career-card-main">
-                    <div class="career-card-left">
-                        @php
-                            // Split duration string to put duration e.g. "(3 Month)" on a new line if needed
-                            $durText = $entry->duration;
-                            $durParts = explode(' (', $durText);
-                            $dateRange = $durParts[0];
-                            $months = isset($durParts[1]) ? '(' . $durParts[1] : '';
-                        @endphp
-                        <span class="career-date-range">{{ $dateRange }}</span>
-                        @if($months)
-                        <span class="career-date-months">{{ $months }}</span>
-                        @endif
-                    </div>
-                    <div class="career-card-right">
-                        <div class="career-card-header">
-                            @if($entry->logo_url)
-                            <div class="career-company-logo">
-                                <img src="{{ $entry->logo_url }}" alt="{{ $entry->company }}">
+            @foreach($careerGroups as $groupIdx => $group)
+                @if(count($group['entries']) === 1)
+                    {{-- ========== SINGLE ENTRY CARD ========== --}}
+                    @php $entry = $group['entries'][0]; @endphp
+                    <div class="career-card {{ $groupIdx >= 4 ? 'career-hidden' : '' }}" data-career-card data-entry="{{ json_encode($entry) }}" data-career-index="{{ $groupIdx }}" data-scroll-reveal>
+                        <div class="career-card-main">
+                            <div class="career-card-left">
+                                @php
+                                    $durText = $entry->duration;
+                                    $durParts = explode(' (', $durText);
+                                    $dateRange = $durParts[0];
+                                    $months = isset($durParts[1]) ? '(' . $durParts[1] : '';
+                                @endphp
+                                <span class="career-date-range">{{ $dateRange }}</span>
+                                @if($months)
+                                <span class="career-date-months">{{ $months }}</span>
+                                @endif
                             </div>
-                            @endif
-                            <div class="career-header-info">
-                                <h3 class="career-title">{{ $entry->position }}</h3>
-                                <p class="career-company">{{ $entry->company }} · {{ ucfirst($entry->type) }}</p>
-                                @if($entry->location)
-                                <p class="career-location">{{ $entry->location }}</p>
+                            <div class="career-card-right">
+                                <div class="career-card-header">
+                                    @if($entry->logo_url)
+                                    <div class="career-company-logo">
+                                        <img src="{{ $entry->logo_url }}" alt="{{ $entry->company }}">
+                                    </div>
+                                    @endif
+                                    <div class="career-header-info">
+                                        <h3 class="career-title">{{ $entry->position }}</h3>
+                                        <p class="career-company">{{ $entry->company }} · {{ ucfirst($entry->type) }}</p>
+                                        @if($entry->location)
+                                        <p class="career-location">{{ $entry->location }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="career-card-desc">
+                                    <p>{{ Str::limit(implode(' ', $entry->description ?? []), 200) }}</p>
+                                </div>
+                                @if(!empty($entry->media_urls))
+                                @php
+                                    $mediaList = array_map(function($url) {
+                                        if (str_starts_with($url, '/img/')) {
+                                            return '/img/' . rawurlencode(substr($url, 5));
+                                        }
+                                        return $url;
+                                    }, $entry->media_urls);
+                                @endphp
+                                <div class="career-card-gallery">
+                                    @foreach(array_slice($mediaList, 0, 3) as $idx => $media)
+                                        <div class="career-gallery-item" onclick='openLightbox({!! json_encode($mediaList) !!}, {{ $idx }}); event.stopPropagation();'>
+                                            <img src="{{ $media }}" alt="Activity Photo">
+                                        </div>
+                                    @endforeach
+                                    @if(count($mediaList) > 3)
+                                        <div class="career-gallery-more" onclick='openLightbox({!! json_encode($mediaList) !!}, 3); event.stopPropagation();'>
+                                            <img src="{{ $mediaList[3] }}" alt="Activity Photo">
+                                            <div class="gallery-more-overlay">
+                                                <span>{{ count($mediaList) - 3 }}+</span>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
                                 @endif
                             </div>
                         </div>
-                        <div class="career-card-desc">
-                            <p>{{ Str::limit(implode(' ', $entry->description ?? []), 200) }}</p>
-                        </div>
-                        @php
-                            $hasMedia = !empty($entry->media_urls);
-                            $mediaList = $hasMedia ? $entry->media_urls : [
-                                'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop',
-                                'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop',
-                                'https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=600&h=400&fit=crop',
-                                'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=600&h=400&fit=crop',
-                                'https://images.unsplash.com/photo-1611605698335-8b1569810432?w=600&h=400&fit=crop'
-                            ]; 
-                        @endphp
-                        
-                        <div class="career-card-gallery">
-                            @foreach(array_slice($mediaList, 0, 3) as $index => $media)
-                                <div class="career-gallery-item" style="cursor:pointer;" onclick='openLightbox({!! json_encode($mediaList) !!}, {{ $index }}); event.stopPropagation();'>
-                                    <img src="{{ $media }}" alt="Activity Photo">
-                                </div>
-                            @endforeach
-                            @if(count($mediaList) > 3)
-                                <div class="career-gallery-more" style="cursor:pointer;" onclick='openLightbox({!! json_encode($mediaList) !!}, 3); event.stopPropagation();'>
-                                    <img src="{{ $mediaList[3] }}" alt="Activity Photo">
-                                    <div class="gallery-more-overlay">
-                                        <span>{{ count($mediaList) - 3 }}+</span>
+                    </div>
+                @else
+                    {{-- ========== GROUPED ENTRIES (LinkedIn-style timeline) ========== --}}
+                    @php
+                        $firstEntry = $group['entries'][0];
+                        $lastEntry = $group['entries'][count($group['entries']) - 1];
+                        $totalStart = $lastEntry->start_date;
+                        $totalEnd = $firstEntry->end_date ?? now();
+                        $diff = $totalStart->diff($totalEnd);
+                        $totalParts = [];
+                        if ($diff->y > 0) $totalParts[] = $diff->y . ' Year';
+                        if ($diff->m > 0) $totalParts[] = $diff->m . ' Month';
+                        if (empty($totalParts)) $totalParts[] = '< 1 Month';
+                        $totalDuration = implode(' ', $totalParts);
+                        $totalDateRange = $lastEntry->start_date->format('M Y') . ' – ' . ($firstEntry->end_date ? $firstEntry->end_date->format('M Y') : 'Present');
+                    @endphp
+                    <div class="career-card career-card-grouped {{ $groupIdx >= 4 ? 'career-hidden' : '' }}" data-career-index="{{ $groupIdx }}" data-scroll-reveal>
+                        <div class="career-card-main">
+                            <div class="career-card-left">
+                                <span class="career-date-range">{{ $totalDateRange }}</span>
+                                <span class="career-date-months">({{ $totalDuration }})</span>
+                            </div>
+                            <div class="career-card-right">
+                                {{-- Company header --}}
+                                <div class="career-card-header career-group-header">
+                                    @if($group['logo_url'])
+                                    <div class="career-company-logo">
+                                        <img src="{{ $group['logo_url'] }}" alt="{{ $group['company'] }}">
+                                    </div>
+                                    @endif
+                                    <div class="career-header-info">
+                                        <h3 class="career-title" style="font-size:1.15rem;">{{ $group['company'] }}</h3>
+                                        <p class="career-company">{{ ucfirst($group['type']) }} · {{ $totalDuration }}</p>
+                                        @if($group['location'])
+                                        <p class="career-location">{{ $group['location'] }}</p>
+                                        @endif
                                     </div>
                                 </div>
-                            @endif
+
+                                {{-- Timeline sub-entries --}}
+                                <div class="career-timeline-roles">
+                                    @foreach($group['entries'] as $roleIdx => $entry)
+                                    <div class="career-timeline-role" data-career-card data-entry="{{ json_encode($entry) }}">
+                                        <div class="career-timeline-marker">
+                                            <div class="career-timeline-dot"></div>
+                                            @if(!$loop->last)
+                                            <div class="career-timeline-line"></div>
+                                            @endif
+                                        </div>
+                                        <div class="career-timeline-content">
+                                            <h4 class="career-role-title">{{ $entry->position }}</h4>
+                                            @php
+                                                $roleDur = $entry->duration;
+                                                $roleParts = explode(' (', $roleDur);
+                                                $roleDateRange = $roleParts[0];
+                                                $roleMonths = isset($roleParts[1]) ? '(' . $roleParts[1] : '';
+                                            @endphp
+                                            <p class="career-role-duration">{{ $roleDateRange }} · {{ $roleMonths }}</p>
+                                            <p class="career-role-desc">{{ Str::limit(implode(' ', $entry->description ?? []), 180) }}</p>
+                                            @if(!empty($entry->media_urls))
+                                            @php
+                                                $mediaList = array_map(function($url) {
+                                                    if (str_starts_with($url, '/img/')) {
+                                                        return '/img/' . rawurlencode(substr($url, 5));
+                                                    }
+                                                    return $url;
+                                                }, $entry->media_urls);
+                                            @endphp
+                                            <div class="career-card-gallery career-role-gallery">
+                                                @foreach(array_slice($mediaList, 0, 3) as $idx => $media)
+                                                    <div class="career-gallery-item" onclick='openLightbox({!! json_encode($mediaList) !!}, {{ $idx }}); event.stopPropagation();'>
+                                                        <img src="{{ $media }}" alt="Activity Photo">
+                                                    </div>
+                                                @endforeach
+                                                @if(count($mediaList) > 3)
+                                                    <div class="career-gallery-more" onclick='openLightbox({!! json_encode($mediaList) !!}, 3); event.stopPropagation();'>
+                                                        <img src="{{ $mediaList[3] }}" alt="Activity Photo">
+                                                        <div class="gallery-more-overlay">
+                                                            <span>{{ count($mediaList) - 3 }}+</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                @endif
             @endforeach
         </div>
+
+        @if(count($careerGroups) > 4)
+        <div class="career-show-more-wrap">
+            <button id="career-show-more-btn" class="career-show-more-btn" onclick="toggleCareerCards()">
+                <span class="career-show-more-text">Show More Experiences</span>
+                <span class="career-show-more-count">({{ count($careerGroups) - 4 }} more)</span>
+                <svg class="career-show-more-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+        </div>
+        @endif
     </div>
 </section>
 

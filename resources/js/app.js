@@ -643,6 +643,130 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ============================================
+   CAREER — Show More / Show Less Toggle (GSAP)
+   ============================================ */
+let careerExpanded = false;
+let careerToggleTl = null;
+
+function toggleCareerCards() {
+    const hiddenCards = gsap.utils.toArray('.career-card.career-hidden');
+    const btn = document.getElementById('career-show-more-btn');
+    const btnWrap = btn.closest('.career-show-more-wrap');
+    const textSpan = btn.querySelector('.career-show-more-text');
+    const countSpan = btn.querySelector('.career-show-more-count');
+    const arrow = btn.querySelector('.career-show-more-arrow');
+
+    // Kill any in-progress animation
+    if (careerToggleTl) careerToggleTl.kill();
+
+    careerExpanded = !careerExpanded;
+
+    if (careerExpanded) {
+        // -- EXPAND --
+
+        // Kill ScrollTrigger on hidden cards to avoid conflicts
+        hiddenCards.forEach(card => {
+            ScrollTrigger.getAll().forEach(st => {
+                if (st.trigger === card) st.kill();
+            });
+        });
+
+        // Set initial state: visible but transparent
+        gsap.set(hiddenCards, { display: 'block', opacity: 0, y: 30 });
+
+        careerToggleTl = gsap.timeline({
+            defaults: { ease: 'power3.out' },
+            onComplete: () => {
+                btn.classList.add('expanded');
+                // Clean up — remove all GSAP inline styles except display
+                hiddenCards.forEach(card => {
+                    gsap.set(card, { clearProps: 'opacity,y,transform,scale,visibility' });
+                    card.style.opacity = '1';
+                    card.style.transform = '';
+                });
+            }
+        });
+
+        // 1) Fade out button
+        careerToggleTl.to(btnWrap, {
+            opacity: 0,
+            y: -10,
+            duration: 0.2,
+            ease: 'power2.in'
+        });
+
+        // 2) Stagger cards in — use opacity (not autoAlpha) to avoid visibility conflicts
+        careerToggleTl.to(hiddenCards, {
+            opacity: 1,
+            y: 0,
+            duration: 0.5,
+            stagger: 0.1,
+            ease: 'back.out(1.2)'
+        }, '-=0.05');
+
+        // 3) Slide button back in
+        careerToggleTl.fromTo(btnWrap,
+            { opacity: 0, y: 25 },
+            { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' },
+            '-=0.15'
+        );
+
+        // Arrow + text
+        gsap.to(arrow, { rotation: 180, duration: 0.5, ease: 'back.out(2)' });
+        textSpan.textContent = 'Show Less';
+        gsap.to(countSpan, { opacity: 0, duration: 0.2 });
+
+    } else {
+        // -- COLLAPSE --
+
+        careerToggleTl = gsap.timeline({
+            defaults: { ease: 'power2.inOut' },
+            onComplete: () => {
+                // Hide cards and clean up all inline styles
+                hiddenCards.forEach(card => {
+                    gsap.set(card, { clearProps: 'opacity,y,transform,scale,visibility' });
+                    card.style.display = 'none';
+                    card.style.opacity = '';
+                    card.style.transform = '';
+                });
+                btn.classList.remove('expanded');
+                gsap.set(btnWrap, { clearProps: 'opacity,y,transform,visibility' });
+            }
+        });
+
+        // 1) Fade out button
+        careerToggleTl.to(btnWrap, {
+            opacity: 0,
+            y: 10,
+            duration: 0.2,
+            ease: 'power2.in'
+        });
+
+        // 2) Stagger cards out in reverse
+        careerToggleTl.to(hiddenCards, {
+            opacity: 0,
+            y: -15,
+            duration: 0.3,
+            stagger: { each: 0.06, from: 'end' }
+        }, '-=0.05');
+
+        // 3) Slide button back up
+        careerToggleTl.fromTo(btnWrap,
+            { opacity: 0, y: -15 },
+            { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' },
+            '-=0.1'
+        );
+
+        // Arrow + text
+        gsap.to(arrow, { rotation: 0, duration: 0.5, ease: 'back.out(2)' });
+        textSpan.textContent = 'Show More Experiences';
+        gsap.to(countSpan, { opacity: 1, duration: 0.3, delay: 0.1 });
+    }
+}
+
+window.toggleCareerCards = toggleCareerCards;
+
+/* ============================================
    CAREER INTERACTION — Modal Popup
    ============================================ */
 function initCareerInteraction() {
@@ -724,11 +848,23 @@ function initCareerInteraction() {
             });
             skillsCont.classList.remove('hidden');
 
-            // Gallery placeholders mapping
+            // Gallery — only show if entry has real media
             const galleryCont = document.getElementById('cm-gallery-container');
-            const mediaArr = (entry.media_urls && Array.isArray(entry.media_urls) && entry.media_urls.length > 0) 
-                              ? entry.media_urls 
-                              : dummyImages;
+            const hasMedia = entry.media_urls && Array.isArray(entry.media_urls) && entry.media_urls.length > 0;
+            
+            if (!hasMedia) {
+                galleryCont.innerHTML = '';
+                galleryCont.classList.add('hidden');
+            } else {
+                const rawMediaArr = entry.media_urls;
+                // URL-encode local paths that have spaces in filenames
+                const mediaArr = rawMediaArr.map(url => {
+                    if (url.startsWith('/img/')) {
+                        const filename = url.substring(5);
+                        return '/img/' + encodeURIComponent(filename);
+                    }
+                    return url;
+                });
             
             galleryCont.innerHTML = '';
             mediaArr.slice(0, 3).forEach((url, idx) => {
@@ -762,6 +898,7 @@ function initCareerInteraction() {
                 galleryCont.appendChild(moreItem);
             }
             galleryCont.classList.remove('hidden');
+            }
 
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';

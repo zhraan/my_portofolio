@@ -1066,24 +1066,35 @@ body::before {
 }
 
 /* Make custom cursor white/neon on specific dark section interactions */
-body.lightbox-active .cursor-dot, body.lightbox-active .cursor-trail,
 body:has(#github:hover) .cursor-dot, body:has(#github:hover) .cursor-trail,
-body:has(#music:hover) .cursor-dot, body:has(#music:hover) .cursor-trail,
-body:has(.career-gallery-item:hover) .cursor-dot, body:has(.career-gallery-item:hover) .cursor-trail,
-body:has(.career-gallery-more:hover) .cursor-dot, body:has(.career-gallery-more:hover) .cursor-trail {
+body:has(#music:hover) .cursor-dot, body:has(#music:hover) .cursor-trail {
     background-color: #ffffff !important;
 }
 
-body.lightbox-active .cursor-ring,
+/* Green cursor on career gallery image hover and lightbox fullscreen */
+body.lightbox-active .cursor-dot, body.lightbox-active .cursor-trail,
+body:has(.career-gallery-item:hover) .cursor-dot, body:has(.career-gallery-item:hover) .cursor-trail,
+body:has(.career-gallery-more:hover) .cursor-dot, body:has(.career-gallery-more:hover) .cursor-trail {
+    background-color: var(--accent) !important;
+}
+
 body:has(#github:hover) .cursor-ring,
-body:has(#music:hover) .cursor-ring,
-body:has(.career-gallery-item:hover) .cursor-ring,
-body:has(.career-gallery-more:hover) .cursor-ring {
+body:has(#music:hover) .cursor-ring {
     border-color: #ffffff !important;
 }
 
+/* Green cursor ring on career gallery image hover and lightbox fullscreen */
+body.lightbox-active .cursor-ring,
+body:has(.career-gallery-item:hover) .cursor-ring,
+body:has(.career-gallery-more:hover) .cursor-ring {
+    border-color: var(--accent) !important;
+}
+
 /* Force override system cursor in imported subcomponents */
-#github *, .gh-list-item *, .gh-list-item a, .calendar *, .calendar a, .calendar rect {
+#github *, .gh-list-item *, .gh-list-item a, .calendar *, .calendar a, .calendar rect,
+.career-card, .career-card *, .career-timeline-role, .career-timeline-role *,
+.career-gallery-item, .career-gallery-item *, .career-gallery-more, .career-gallery-more *,
+.career-card-grouped, .career-card-grouped * {
     cursor: none !important;
 }
 
@@ -1309,6 +1320,94 @@ body:has(.career-gallery-more:hover) .cursor-ring {
     gap: 1.5rem;
 }
 
+/* Hide overflow cards beyond 4 */
+.career-card.career-hidden {
+    display: none;
+}
+
+/* Show More Button */
+.career-show-more-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 3.5rem;
+    margin-bottom: 1rem;
+}
+
+.career-show-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 2rem;
+    background: transparent;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: none;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.career-show-more-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 0;
+}
+
+.career-show-more-btn:hover::before {
+    transform: scaleX(1);
+}
+
+.career-show-more-btn:hover {
+    color: #0A0A0A;
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 255, 133, 0.25);
+}
+
+.career-show-more-btn > * {
+    position: relative;
+    z-index: 1;
+}
+
+[data-theme="light"] .career-show-more-btn {
+    color: #1a7f5a;
+    border-color: #1a7f5a;
+    font-family: var(--font-primary);
+}
+
+[data-theme="light"] .career-show-more-btn::before {
+    background: #1a7f5a;
+}
+
+[data-theme="light"] .career-show-more-btn:hover {
+    color: #ffffff;
+    box-shadow: 0 8px 30px rgba(26, 127, 90, 0.25);
+}
+
+.career-show-more-count {
+    opacity: 0.7;
+    font-size: 0.78rem;
+}
+
+.career-show-more-arrow {
+    transition: transform 0.35s ease;
+}
+
+.career-show-more-btn.expanded .career-show-more-arrow {
+    transform: rotate(180deg);
+}
+
 .career-card {
     display: block;
     cursor: pointer;
@@ -1406,24 +1505,24 @@ body:has(.career-gallery-more:hover) .cursor-ring {
 }
 
 .career-company-logo {
-    height: 48px;  /* Fixed height instead of square */
-    background: rgba(255,255,255,0.05);
-    border-radius: 8px;
+    height: 52px;
+    background: transparent;
+    border-radius: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 8px 12px;
+    padding: 0;
     flex-shrink: 0;
 }
 
 [data-theme="light"] .career-company-logo {
-    background: #f0f4f2;
+    background: transparent;
 }
 
 .career-company-logo img {
     height: 100%;
     width: auto;
-    max-width: 150px;
+    max-width: 160px;
     object-fit: contain;
 }
 
@@ -1466,6 +1565,7 @@ body:has(.career-gallery-more:hover) .cursor-ring {
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     margin-top: 0;
+    justify-content: flex-start;
 }
 
 .career-card:hover .career-card-gallery {
@@ -1475,9 +1575,10 @@ body:has(.career-gallery-more:hover) .cursor-ring {
 }
 
 .career-gallery-item, .career-gallery-more {
-    flex: 1;
+    flex: 0 0 calc(25% - 0.75rem);
+    max-width: calc(25% - 0.75rem);
     height: 120px;
-    border-radius: 12px;
+    border-radius: 0;
     overflow: hidden;
     position: relative;
     background: rgba(var(--accent-rgb), 0.1);
@@ -1511,6 +1612,114 @@ body:has(.career-gallery-more:hover) .cursor-ring {
     z-index: 10;
 }
 
+/* ============================================
+   GROUPED CAREER CARD — LinkedIn-style Timeline
+   ============================================ */
+.career-card-grouped .career-group-header {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-glass);
+    margin-bottom: 0.5rem;
+}
+
+[data-theme="light"] .career-card-grouped .career-group-header {
+    border-bottom-color: #ddd;
+}
+
+.career-timeline-roles {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.career-timeline-role {
+    display: flex;
+    gap: 1rem;
+    cursor: pointer;
+    padding: 0.75rem 0.5rem;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.career-timeline-role:hover {
+    background: rgba(255,255,255,0.04);
+}
+
+[data-theme="light"] .career-timeline-role:hover {
+    background: rgba(0,0,0,0.03);
+}
+
+.career-timeline-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 16px;
+    padding-top: 6px;
+}
+
+.career-timeline-marker .career-timeline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+}
+
+[data-theme="light"] .career-timeline-marker .career-timeline-dot {
+    background: #1a7f5a;
+    border-color: #1a7f5a;
+    box-shadow: 0 0 0 3px rgba(26, 127, 90, 0.15);
+}
+
+.career-timeline-marker .career-timeline-line {
+    width: 2px;
+    flex: 1;
+    background: var(--accent);
+    opacity: 0.4;
+    margin-top: 4px;
+}
+
+[data-theme="light"] .career-timeline-marker .career-timeline-line {
+    background: #1a7f5a;
+}
+
+.career-timeline-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.career-role-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.15rem;
+}
+
+.career-role-duration {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.career-role-desc {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin-bottom: 0.5rem;
+}
+
+/* Gallery inside timeline roles — hidden by default, shown on card hover */
+.career-role-gallery {
+    margin-top: 0.75rem;
+}
+
+.career-card-grouped:hover .career-role-gallery {
+    max-height: 200px;
+    opacity: 1;
+}
 
 
 /* Modal Close Button */
@@ -1549,11 +1758,11 @@ body:has(.career-gallery-more:hover) .cursor-ring {
 .cm-header-left .career-company-logo {
     width: 65px;
     height: 65px;
-    padding: 8px;
-    background: rgba(255,255,255,0.08); /* fallback */
+    padding: 0;
+    background: transparent;
 }
 [data-theme="light"] .cm-header-left .career-company-logo {
-    background: #c3e0cf;
+    background: transparent;
 }
 
 #cm-logo {
@@ -1675,6 +1884,7 @@ body:has(.career-gallery-more:hover) .cursor-ring {
     gap: 1rem;
     width: 100%;
     margin-top: 1.5rem;
+    justify-content: flex-start;
 }
 
 /* =============================== */
@@ -1696,12 +1906,12 @@ body:has(.career-gallery-more:hover) .cursor-ring {
 body.lightbox-active .cursor-dot, body.lightbox-active .cursor-trail,
 body:has(.career-gallery-item:hover) .cursor-dot, body:has(.career-gallery-item:hover) .cursor-trail,
 body:has(.career-gallery-more:hover) .cursor-dot, body:has(.career-gallery-more:hover) .cursor-trail {
-    background-color: #ffffff !important;
+    background-color: var(--accent) !important;
 }
 body.lightbox-active .cursor-ring,
 body:has(.career-gallery-item:hover) .cursor-ring,
 body:has(.career-gallery-more:hover) .cursor-ring {
-    border-color: #ffffff !important;
+    border-color: var(--accent) !important;
 }
 
 .lightbox-overlay.active {
