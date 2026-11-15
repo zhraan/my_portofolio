@@ -1,0 +1,10 @@
+# Netlify can't run PHP at request time, so the site is deployed as a static
+# export: Vite compiles the assets, then Laravel renders the homepage to
+# dist/index.html at build time (see scripts/build-static.php).
+# The admin panel, Google login and live database are not available on Netlify.
+[build]
+  command = "npm run build && php scripts/build-static.php"
+  publish = "dist"
+
+[build.environment]
+  PHP_VERSION = "8.3"
